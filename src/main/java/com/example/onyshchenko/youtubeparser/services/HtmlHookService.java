@@ -15,7 +15,7 @@ public class HtmlHookService {
 
         try {
             LOGGER.info("Getting document from address: [{}]", address);
-            Document doc = Jsoup.connect(address).get();
+            Document doc = Jsoup.connect(address).header("accept-language", "en-EN").get();
             String docTitle = doc.title();
             LOGGER.info("Document received from site with title: [{}]", docTitle);
 

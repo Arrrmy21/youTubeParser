@@ -1,11 +1,15 @@
 package com.example.onyshchenko.youtubeparser.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class YouTubeChannelInfo {
 
     private String id;
     private String url;
     private Long registrationDate;
     private int views;
+    @JsonIgnore
+    private String canonicalChannelName;
 
     public String getId() {
         return id;
@@ -37,5 +41,13 @@ public class YouTubeChannelInfo {
 
     public void setViews(int views) {
         this.views = views;
+    }
+
+    public String getCanonicalChannelName() {
+        return canonicalChannelName;
+    }
+
+    public void setCanonicalChannelName(String canonicalChannelName) {
+        this.canonicalChannelName = canonicalChannelName;
     }
 }
