@@ -6,13 +6,18 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,8 +26,8 @@ public class DocumentParserService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DocumentParserService.class);
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-M-d");
-    private static final DateTimeFormatter CHANNEL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-M-d", Locale.ENGLISH);
+    private static final DateTimeFormatter CHANNEL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
     private static final String CONTENT = "content";
     private static final String CONTENTS = "contents";
     private static final String HREF = "href";
@@ -72,7 +77,7 @@ public class DocumentParserService {
         return minutes * 60 + seconds;
     }
 
-    public Optional<YouTubeChannelInfo> convertChannelDocumentToData(Document document) {
+    public Optional<YouTubeChannelInfo> convertChannelDocumentToJavaObject(Document document) {
         try {
             LOGGER.info("Converting document data to YouTubeChannelInfo.");
 
@@ -82,8 +87,8 @@ public class DocumentParserService {
             youTubeChannelInfo.setUrl(url);
 
             JsonObject channelNameJson = getNestedJsonObject(document, true);
-            String[] channelName = channelNameJson.getAsJsonPrimitive("canonicalBaseUrl").getAsString().split("/");
-            youTubeChannelInfo.setCanonicalChannelName(channelName[2]);
+            String channelName = channelNameJson.getAsJsonPrimitive("canonicalBaseUrl").getAsString();
+            youTubeChannelInfo.setCanonicalChannelName(channelName.substring(1));
 
             String channelId = document.getElementsByAttributeValue(ITEM, "channelId").get(0).attributes().get(CONTENT);
             youTubeChannelInfo.setId(channelId);
@@ -115,10 +120,7 @@ public class DocumentParserService {
     }
 
     private JsonObject getNestedJsonObject(Document document, boolean isMainChannelPage) {
-        String views = document.body().childNodes().get(10).childNodes().get(0).toString();
-
-        String formattedJson = views.substring(20, views.length() - 1);
-        JsonObject actualObj = new Gson().fromJson(formattedJson, JsonObject.class);
+        JsonObject actualObj = prepareDocumentAsJson(document);
 
         if (isMainChannelPage) {
             return getCanonicalChannelNameFromJson(actualObj);
@@ -126,19 +128,6 @@ public class DocumentParserService {
             return getChannelMetadataFromJson(actualObj);
         }
 
-    }
-
-    private JsonObject getChannelMetadataFromJson(JsonObject actualObj) {
-        return actualObj.getAsJsonObject(CONTENTS).getAsJsonObject("twoColumnBrowseResultsRenderer").getAsJsonArray("tabs").get(5).getAsJsonObject()
-                .getAsJsonObject("tabRenderer").getAsJsonObject(CONTENT).getAsJsonObject("sectionListRenderer").getAsJsonArray(CONTENTS)
-                .getAsJsonArray().get(0).getAsJsonObject().getAsJsonObject("itemSectionRenderer").getAsJsonArray(CONTENTS).get(0).getAsJsonObject()
-                .getAsJsonObject("channelAboutFullMetadataRenderer").getAsJsonObject();
-
-    }
-
-    private JsonObject getCanonicalChannelNameFromJson(JsonObject actualObj) {
-        return actualObj.getAsJsonObject(CONTENTS).getAsJsonObject("twoColumnBrowseResultsRenderer").getAsJsonArray("tabs").get(5).getAsJsonObject()
-                .getAsJsonObject("tabRenderer").getAsJsonObject("endpoint").getAsJsonObject("browseEndpoint");
     }
 
     private Integer prepareViewsFromJson(JsonObject viewCountText) {
@@ -156,5 +145,48 @@ public class DocumentParserService {
         LocalDate publishedDate = LocalDate.parse(preParsedCreationDate, CHANNEL_DATE_TIME_FORMATTER);
 
         return publishedDate.toEpochDay();
+    }
+
+    public List<String> getVideoIdsFromChannelDocument(Document document, int requiredSize) {
+
+        try {
+            Elements videos = document.getElementsByClass("style-scope ytd-grid-renderer").select("ytd-grid-video-renderer");
+
+            List<String> videoIds = new ArrayList<>();
+
+            int actualVideosAmount = Math.min(Math.min(videos.size(), requiredSize), 50);
+
+            for (int i = 0; i < actualVideosAmount; i++) {
+                Element videoElement = videos.get(i);
+                String videoId = videoElement.getElementsByClass("yt-simple-endpoint style-scope ytd-grid-video-renderer")
+                        .get(0).attributes().get("href");
+                videoIds.add(videoId.substring(9));
+            }
+
+            return videoIds;
+        } catch (Exception ex) {
+            LOGGER.error("Error while parsing document with channel's videos");
+            return Collections.emptyList();
+        }
+    }
+
+    private JsonObject prepareDocumentAsJson(Document document) {
+        String views = document.body().childNodes().get(10).childNodes().get(0).toString();
+        String formattedJson = views.substring(20, views.length() - 1);
+
+        return new Gson().fromJson(formattedJson, JsonObject.class);
+    }
+
+    private JsonObject getChannelMetadataFromJson(JsonObject actualObj) {
+        return actualObj.getAsJsonObject(CONTENTS).getAsJsonObject("twoColumnBrowseResultsRenderer").getAsJsonArray("tabs").get(5).getAsJsonObject()
+                .getAsJsonObject("tabRenderer").getAsJsonObject(CONTENT).getAsJsonObject("sectionListRenderer").getAsJsonArray(CONTENTS)
+                .getAsJsonArray().get(0).getAsJsonObject().getAsJsonObject("itemSectionRenderer").getAsJsonArray(CONTENTS).get(0).getAsJsonObject()
+                .getAsJsonObject("channelAboutFullMetadataRenderer").getAsJsonObject();
+
+    }
+
+    private JsonObject getCanonicalChannelNameFromJson(JsonObject actualObj) {
+        return actualObj.getAsJsonObject(CONTENTS).getAsJsonObject("twoColumnBrowseResultsRenderer").getAsJsonArray("tabs").get(5).getAsJsonObject()
+                .getAsJsonObject("tabRenderer").getAsJsonObject("endpoint").getAsJsonObject("browseEndpoint");
     }
 }
