@@ -12,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.TimeUnit;
-
 @Service
 public class HtmlHookService {
 
@@ -34,9 +32,11 @@ public class HtmlHookService {
         try {
             driver.get(address);
             if (size > 30) {
-                driver.manage().timeouts().implicitlyWait(4, TimeUnit.SECONDS);
+                LOGGER.info("Total required elements: {}. Scrolling the page.", size);
                 JavascriptExecutor js = (JavascriptExecutor) driver;
-                js.executeScript("window.scrollBy(0,5000)", "");
+                js.executeScript("window.scrollTo(0, document.querySelector(\"ytd-app\").scrollHeight)");
+
+                Thread.sleep(1000);
             }
             return Jsoup.parse(driver.getPageSource());
         } catch (Exception ex) {

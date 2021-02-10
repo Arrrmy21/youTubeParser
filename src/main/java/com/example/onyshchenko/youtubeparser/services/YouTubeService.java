@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+import java.util.stream.Collectors;
 
 @Service
 public class YouTubeService {
@@ -87,10 +87,11 @@ public class YouTubeService {
         List<YouTubeVideoInfo> videoList = new ArrayList<>(size);
         if (document != null) {
             List<String> channelVideos = documentParserService.getVideoIdsFromChannelDocument(document, size);
-            for (String videoId : channelVideos) {
-                Optional<YouTubeVideoInfo> videoInfo = getYouTubeVideoInfo(videoId);
-                videoInfo.ifPresent(videoList::add);
-            }
+
+            videoList = channelVideos.stream().parallel()
+                    .map(this::getYouTubeVideoInfo)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get).collect(Collectors.toList());
         }
 
         YouTubeVideosSearchInfo response = new YouTubeVideosSearchInfo();
