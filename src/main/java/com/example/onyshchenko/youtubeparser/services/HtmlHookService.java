@@ -54,7 +54,7 @@ public class HtmlHookService {
         }
     }
 
-    public Document getDataFromUrl(String address) {
+    public Document getDocumentFromUrl(String address) {
 
         HookPageTask task = new HookPageTask(address);
         Document document = null;

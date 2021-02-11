@@ -32,28 +32,28 @@ public class YouTubeService {
 
     public Optional<YouTubeVideoInfo> getYouTubeVideoInfo(String videoId) {
 
-        Document document = htmlHookService.getDataFromUrl(VIDEO_ADDRESS + videoId);
+        Document document = htmlHookService.getDocumentFromUrl(VIDEO_ADDRESS + videoId);
 
         if (document.getElementById("watch7-content") == null) {
             LOGGER.warn("Information about video content is absent.");
             return Optional.empty();
         }
 
-        return documentParserService.convertVideoDocumentToData(document);
+        return documentParserService.convertVideoDocumentToJavaObject(document);
     }
 
     public Optional<YouTubeChannelInfo> getYouTubeChannelInfo(String channelId) {
 
-        Document document = htmlHookService.getDataFromUrl(CHANNEL_ADDRESS + channelId);
-        if (document == null) {
+        Document mainChannelPageDocument = htmlHookService.getDocumentFromUrl(CHANNEL_ADDRESS + channelId);
+        if (mainChannelPageDocument == null) {
             LOGGER.warn("Information about channel is absent.");
             return Optional.empty();
         }
-        Optional<YouTubeChannelInfo> youTubeChannelInfo = documentParserService.convertChannelDocumentToJavaObject(document);
+        Optional<YouTubeChannelInfo> youTubeChannelInfo = documentParserService.convertChannelDocumentToJavaObject(mainChannelPageDocument);
         if (youTubeChannelInfo.isPresent()) {
 
             String urlForMetaData = prepareUrlForMetadata(youTubeChannelInfo.get()) + "/about";
-            Document detailedChannelInfo = htmlHookService.getDataFromUrl(urlForMetaData);
+            Document detailedChannelInfo = htmlHookService.getDocumentFromUrl(urlForMetaData);
 
             Map<String, Number> metaDataMap = documentParserService.getChannelMetaData(detailedChannelInfo);
 
@@ -82,13 +82,13 @@ public class YouTubeService {
         if (!channelInfo.isPresent()) {
             return Optional.empty();
         }
-        Document document = getDataFromUrlWithSelenium(channelInfo.get(), size);
+        Document channelVideosPage = getDataFromUrlWithSelenium(channelInfo.get(), size);
 
         List<YouTubeVideoInfo> videoList = new ArrayList<>(size);
-        if (document != null) {
-            List<String> channelVideos = documentParserService.getVideoIdsFromChannelDocument(document, size);
+        if (channelVideosPage != null) {
+            List<String> idOfChannelVideos = documentParserService.getVideoIdsFromChannelDocument(channelVideosPage, size);
 
-            videoList = channelVideos.stream().parallel()
+            videoList = idOfChannelVideos.stream().parallel()
                     .map(this::getYouTubeVideoInfo)
                     .filter(Optional::isPresent)
                     .map(Optional::get).collect(Collectors.toList());
@@ -103,9 +103,11 @@ public class YouTubeService {
     }
 
     public Document getDataFromUrlWithSelenium(YouTubeChannelInfo channel, int size) {
+
         LOGGER.debug("Entering method getDataFromUrlWithSelenium() for channel: {} and size: {}", channel.getId(), size);
         try {
             String address = prepareUrlForMetadata(channel) + VIDEOS_GRID_ENDING;
+
             return htmlHookService.getDocumentWithSelenium(address, size);
         } catch (Exception ex) {
             LOGGER.info("Error while getting Document.");

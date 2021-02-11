@@ -26,14 +26,14 @@ public class DocumentParserService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DocumentParserService.class);
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-M-d", Locale.ENGLISH);
+    private static final DateTimeFormatter VIDEO_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-M-d", Locale.ENGLISH);
     private static final DateTimeFormatter CHANNEL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
     private static final String CONTENT = "content";
     private static final String CONTENTS = "contents";
     private static final String HREF = "href";
     private static final String ITEM = "itemprop";
 
-    public Optional<YouTubeVideoInfo> convertVideoDocumentToData(Document document) {
+    public Optional<YouTubeVideoInfo> convertVideoDocumentToJavaObject(Document document) {
 
         try {
             LOGGER.info("Converting document data to YouTubeVideoInfo.");
@@ -45,7 +45,7 @@ public class DocumentParserService {
             youTubeVideoInfo.setViews(Integer.parseInt(views));
 
             String datePublished = element.getElementsByAttributeValue(ITEM, "datePublished").get(0).attributes().get(CONTENT);
-            LocalDate publishedDate = LocalDate.parse(datePublished, DATE_TIME_FORMATTER);
+            LocalDate publishedDate = LocalDate.parse(datePublished, VIDEO_DATE_TIME_FORMATTER);
             Long timeStamp = publishedDate.toEpochDay();
             youTubeVideoInfo.setPublishedDate(timeStamp);
 
@@ -104,12 +104,12 @@ public class DocumentParserService {
         Map<String, Number> metadataMap = new HashMap<>();
 
         try {
-            JsonObject commonJson = getNestedJsonObject(document, false);
+            JsonObject metadataJson = getNestedJsonObject(document, false);
 
-            Integer totalChannelViews = prepareViewsFromJson(commonJson.getAsJsonObject("viewCountText"));
+            Integer totalChannelViews = prepareViewsFromJson(metadataJson.getAsJsonObject("viewCountText"));
             metadataMap.put("views", totalChannelViews);
 
-            Long dateOfChannelCreation = prepareCreationDateFromJson(commonJson.get("joinedDateText")
+            Long dateOfChannelCreation = prepareCreationDateFromJson(metadataJson.get("joinedDateText")
                     .getAsJsonObject().get("runs").getAsJsonArray().get(1).getAsJsonObject());
             metadataMap.put("registrationDate", dateOfChannelCreation);
 
@@ -171,8 +171,8 @@ public class DocumentParserService {
     }
 
     private JsonObject prepareDocumentAsJson(Document document) {
-        String views = document.body().childNodes().get(10).childNodes().get(0).toString();
-        String formattedJson = views.substring(20, views.length() - 1);
+        String extractedStringBody = document.body().childNodes().get(10).childNodes().get(0).toString();
+        String formattedJson = extractedStringBody.substring(20, extractedStringBody.length() - 1);
 
         return new Gson().fromJson(formattedJson, JsonObject.class);
     }

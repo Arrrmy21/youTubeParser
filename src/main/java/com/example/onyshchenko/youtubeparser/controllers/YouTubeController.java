@@ -28,7 +28,7 @@ public class YouTubeController {
     @Autowired
     private YouTubeService youTubeService;
 
-    @GetMapping(value = "/videos/{id}", produces = {"application/json"})
+    @GetMapping(value = "/video/{id}", produces = {"application/json"})
     public YouTubeVideoInfo getVideoInfo(@PathVariable(value = "id") String id) {
         LOGGER.info("getVideoInfo() Controller entering with id: {}", id);
         Optional<YouTubeVideoInfo> videoInfo = youTubeService.getYouTubeVideoInfo(id);
