@@ -20,7 +20,6 @@ public class YouTubeService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(YouTubeService.class);
 
-
     public static final String VIDEO_ADDRESS = "https://www.youtube.com/watch?v=";
     public static final String CHANNEL_ADDRESS = "https://www.youtube.com/channel/";
     public static final String YOUTUBE_ADDRESS = "https://www.youtube.com/";
@@ -78,6 +77,7 @@ public class YouTubeService {
 
     public Optional<YouTubeVideosSearchInfo> getChannelDetailedInfo(String id, int size) {
 
+        LOGGER.debug("Entering method getChannelDetailedInfo() with channelId: {} and size: {}", id, size);
         Optional<YouTubeChannelInfo> channelInfo = getYouTubeChannelInfo(id);
         if (!channelInfo.isPresent()) {
             return Optional.empty();
@@ -103,10 +103,9 @@ public class YouTubeService {
     }
 
     public Document getDataFromUrlWithSelenium(YouTubeChannelInfo channel, int size) {
-
+        LOGGER.debug("Entering method getDataFromUrlWithSelenium() for channel: {} and size: {}", channel.getId(), size);
         try {
             String address = prepareUrlForMetadata(channel) + VIDEOS_GRID_ENDING;
-
             return htmlHookService.getDocumentWithSelenium(address, size);
         } catch (Exception ex) {
             LOGGER.info("Error while getting Document.");

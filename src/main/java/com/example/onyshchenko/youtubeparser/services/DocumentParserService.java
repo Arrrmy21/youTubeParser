@@ -151,7 +151,7 @@ public class DocumentParserService {
 
         try {
             Elements videos = document.getElementsByClass("style-scope ytd-grid-renderer").select("ytd-grid-video-renderer");
-
+            LOGGER.debug("There are {} videos in document", videos.size());
             List<String> videoIds = new ArrayList<>();
 
             int actualVideosAmount = Math.min(Math.min(videos.size(), requiredSize), 50);

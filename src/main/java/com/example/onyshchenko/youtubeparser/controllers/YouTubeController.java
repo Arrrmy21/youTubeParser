@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @RestController
@@ -45,9 +47,14 @@ public class YouTubeController {
     @GetMapping(value = "/channel/{id}/videos", produces = {"application/json"})
     public YouTubeVideosSearchInfo getChannelDetailedInfo(@PathVariable(value = "id") String id,
                                                           @RequestParam(required = false, defaultValue = "10") int size) {
+        LocalDateTime startingTime = LocalDateTime.now();
         LOGGER.info("getChannelDetailedInfo() Controller entering with id: {} and size: {}", id, size);
 
         Optional<YouTubeVideosSearchInfo> channelInfo = youTubeService.getChannelDetailedInfo(id, size);
+
+        LocalDateTime finishingTime = LocalDateTime.now();
+        LOGGER.info("getChannelDetailedInfo() completed in [{}] milliseconds",
+                Duration.between(startingTime, finishingTime).toMillis());
 
         return channelInfo.orElse(null);
     }

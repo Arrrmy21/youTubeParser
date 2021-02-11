@@ -12,13 +12,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 @Service
 public class HtmlHookService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HtmlHookService.class);
-    private final WebDriver driver = new ChromeDriver(prepareDriverOprions());
+    private final WebDriver driver = new ChromeDriver(prepareDriverOptions());
 
-    private ChromeOptions prepareDriverOprions() {
+    private static final int THREAD_COUNT = 1000;
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(THREAD_COUNT);
+
+    private ChromeOptions prepareDriverOptions() {
         WebDriverManager.getInstance(DriverManagerType.CHROME).setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
@@ -29,34 +36,35 @@ public class HtmlHookService {
     }
 
     public Document getDocumentWithSelenium(String address, int size) {
-        try {
-            driver.get(address);
-            if (size > 30) {
-                LOGGER.info("Total required elements: {}. Scrolling the page.", size);
-                JavascriptExecutor js = (JavascriptExecutor) driver;
-                js.executeScript("window.scrollTo(0, document.querySelector(\"ytd-app\").scrollHeight)");
+        synchronized (driver) {
+            try {
+                driver.get(address);
+                if (size > 30) {
+                    LOGGER.info("Total required elements: {}. Scrolling the page.", size);
+                    JavascriptExecutor js = (JavascriptExecutor) driver;
+                    js.executeScript("window.scrollTo(0, document.querySelector(\"ytd-app\").scrollHeight)");
 
-                Thread.sleep(1000);
+                    Thread.sleep(1000);
+                }
+                return Jsoup.parse(driver.getPageSource());
+            } catch (Exception ex) {
+                LOGGER.error("Error while getting document from address: {}", address);
+                return null;
             }
-            return Jsoup.parse(driver.getPageSource());
-        } catch (Exception ex) {
-            LOGGER.error("Error while getting document from address: {}", address);
-            return null;
         }
     }
 
     public Document getDataFromUrl(String address) {
 
+        HookPageTask task = new HookPageTask(address);
+        Document document = null;
         try {
-            LOGGER.info("Getting document from address: [{}]", address);
-            Document doc = Jsoup.connect(address).header("accept-language", "en-EN").get();
-            String docTitle = doc.title();
-            LOGGER.info("Document received from site with title: [{}]", docTitle);
-
-            return doc;
-        } catch (Exception ex) {
-            LOGGER.error("Error while getting Document.", ex);
-            return null;
+            document = EXECUTOR_SERVICE.submit(task).get().getDocument();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
+
+        return document;
     }
+
 }
