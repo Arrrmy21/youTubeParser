@@ -1,5 +1,6 @@
 package com.example.onyshchenko.youtubeparser.services;
 
+import com.example.onyshchenko.youtubeparser.handler.ContentNotFountException;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import io.github.bonigarcia.wdm.config.DriverManagerType;
 import org.jsoup.Jsoup;
@@ -12,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -49,7 +49,7 @@ public class HtmlHookService {
                 return Jsoup.parse(driver.getPageSource());
             } catch (Exception ex) {
                 LOGGER.error("Error while getting document from address: {}", address);
-                return null;
+                throw new ContentNotFountException(ex);
             }
         }
     }
@@ -57,11 +57,13 @@ public class HtmlHookService {
     public Document getDocumentFromUrl(String address) {
 
         HookPageTask task = new HookPageTask(address);
-        Document document = null;
+        Document document;
         try {
             document = EXECUTOR_SERVICE.submit(task).get().getDocument();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+        } catch (ContentNotFountException e) {
+            throw new ContentNotFountException(e, e.getErrorCode());
+        } catch (Exception ex) {
+            throw new ContentNotFountException(ex);
         }
 
         return document;

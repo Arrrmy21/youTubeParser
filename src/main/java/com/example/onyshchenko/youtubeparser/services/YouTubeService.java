@@ -1,8 +1,10 @@
 package com.example.onyshchenko.youtubeparser.services;
 
+import com.example.onyshchenko.youtubeparser.dto.ChannelMetadata;
 import com.example.onyshchenko.youtubeparser.dto.YouTubeChannelInfo;
 import com.example.onyshchenko.youtubeparser.dto.YouTubeVideoInfo;
 import com.example.onyshchenko.youtubeparser.dto.YouTubeVideosSearchInfo;
+import com.example.onyshchenko.youtubeparser.handler.ContentNotFountException;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -49,16 +50,16 @@ public class YouTubeService {
             LOGGER.warn("Information about channel is absent.");
             return Optional.empty();
         }
-        Optional<YouTubeChannelInfo> youTubeChannelInfo = documentParserService.convertChannelDocumentToJavaObject(mainChannelPageDocument);
+        Optional<YouTubeChannelInfo> youTubeChannelInfo = documentParserService
+                .convertChannelDocumentToJavaObject(mainChannelPageDocument);
         if (youTubeChannelInfo.isPresent()) {
 
             String urlForMetaData = prepareUrlForMetadata(youTubeChannelInfo.get()) + "/about";
             Document detailedChannelInfo = htmlHookService.getDocumentFromUrl(urlForMetaData);
 
-            Map<String, Number> metaDataMap = documentParserService.getChannelMetaData(detailedChannelInfo);
-
-            youTubeChannelInfo.get().setViews(metaDataMap.get("views").intValue());
-            youTubeChannelInfo.get().setRegistrationDate(metaDataMap.get("registrationDate").longValue());
+            ChannelMetadata metadata = documentParserService.getChannelMetaData(detailedChannelInfo);
+            youTubeChannelInfo.get().setViews(metadata.getTotalChannelViews());
+            youTubeChannelInfo.get().setRegistrationDate(metadata.getDateOfChannelCreation());
 
             return youTubeChannelInfo;
         } else {
@@ -111,7 +112,7 @@ public class YouTubeService {
             return htmlHookService.getDocumentWithSelenium(address, size);
         } catch (Exception ex) {
             LOGGER.info("Error while getting Document.");
-            return null;
+            throw new ContentNotFountException(ex);
         }
     }
 }
