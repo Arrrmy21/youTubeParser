@@ -45,8 +45,7 @@ public class DocumentParserService {
 
             Element element = document.getElementById("watch7-content");
 
-            String views = element.getElementsByAttributeValue(ITEM, "interactionCount").get(0).attributes().get(CONTENT);
-            youTubeVideoInfo.setViews(Integer.parseInt(views));
+            youTubeVideoInfo.setViews(getConvertedVideoViewsFromElement(element));
 
             String datePublished = element.getElementsByAttributeValue(ITEM, "datePublished").get(0).attributes().get(CONTENT);
             LocalDate publishedDate = LocalDate.parse(datePublished, VIDEO_DATE_TIME_FORMATTER);
@@ -69,6 +68,16 @@ public class DocumentParserService {
         } catch (Exception ex) {
             LOGGER.warn("Exception during document parsing", ex);
             return Optional.empty();
+        }
+    }
+
+    private Integer getConvertedVideoViewsFromElement(Element element) {
+        try {
+            String views = element.getElementsByAttributeValue(ITEM, "interactionCount").get(0).attributes().get(CONTENT);
+            return Integer.parseInt(views);
+        } catch (NumberFormatException e) {
+            LOGGER.warn("Error while converting string views value to Integer.");
+            return 0;
         }
     }
 

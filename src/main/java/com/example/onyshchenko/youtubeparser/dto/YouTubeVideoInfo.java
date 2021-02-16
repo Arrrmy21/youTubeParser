@@ -7,6 +7,7 @@ public class YouTubeVideoInfo {
     private String title;
     private Integer duration;
     private Long publishedDate;
+    //TODO: change to Long value. Max int value 2,147,483,647 while there are videos with more views
     private Integer views;
 
     public String getId() {
